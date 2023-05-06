@@ -24,6 +24,8 @@ import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
 import com.mongodb.client.model.Aggregates;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 import eng.util.*;
 
 class urlObj extends Document{
@@ -147,7 +149,9 @@ public class Crawler {
         //     String s = matchObj.group();
         //     System.out.println(s);
         // }
-        Crawler crawler_obj = new Crawler("mongodb://root:password@localhost:27017/?authSource=admin");
+        Dotenv dotenv = Dotenv.load();
+        String connString = dotenv.get("CONN_STRING");
+        Crawler crawler_obj = new Crawler(connString);
         long x = System.nanoTime();
         crawler_obj.crawl();
         System.out.println(System.nanoTime()-x);
