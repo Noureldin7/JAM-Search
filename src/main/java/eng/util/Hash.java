@@ -25,7 +25,7 @@ public class Hash {
         return byteArray2Hex(hashBytes);
     }
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException{
-        System.out.println(new Scrap("https://www.google.com").urlHash);
+        System.out.println(new Scrap("https://www.google.com").getUrlHash());
         // System.out.println(encrypt("abcdefghijklmnopqrstuvwxyz", "SHA-1"));
     }
 }

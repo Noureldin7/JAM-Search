@@ -30,13 +30,14 @@ public class Seeder {
         String line;
         while((line = br.readLine()) != null){
             Scrap parsedPage = new Scrap(line);
-            if(exploredSet.contains(parsedPage.urlHash)){
+            String hash = parsedPage.getUrlHash();
+            if(exploredSet.contains(hash)){
                 continue;
             }
             Document doc = new Document();
             doc.append("url", line);
-            doc.append("hash", parsedPage.urlHash);
-            doc.append("score", 5);
+            doc.append("hash", hash);
+            doc.append("score", 10);
             seed_set.insertOne(doc);
         }
         br.close();
