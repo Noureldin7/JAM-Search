@@ -61,7 +61,7 @@ public class MotherCrawler {
     }
     public void spawn() throws IOException, MalformedURLException, NoSuchAlgorithmException{
         for (int i = 0; i < threads; i++) {
-            new Thread(new MinionCrawler(client, urlQueue.get(i))).start();
+            new Thread(new MinionCrawler(seed_set, new Vector<String>(urlQueue.get(i)))).start();
         }
         // new MinionCrawler(client, urlQueue.get(0)).run();
     }
