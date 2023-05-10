@@ -3,6 +3,7 @@ package eng.crawler;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 // import java.util.LinkedList;
 // import java.util.Queue;
 import java.util.Vector;
@@ -35,16 +36,26 @@ public class MinionCrawler extends Thread {
     }
     public void crawl() throws IOException, MalformedURLException, NoSuchAlgorithmException{
         Scrap parsedPage;
+        long tmp;
+        long total = System.nanoTime();
+        long totalWithoutScrap = System.nanoTime();
         while (!urlQueue.isEmpty()) {
             String urlString = urlQueue.remove(urlQueue.size()-1);
             try {
+                tmp = System.nanoTime();
                 parsedPage = new Scrap(urlString);
+                totalWithoutScrap+=System.nanoTime()-tmp;
             } catch (Exception e) {
                 continue;
             }
-            for (String url : parsedPage.getUrls()) {
+            tmp = System.nanoTime();
+            List<String> urls = parsedPage.getUrls();
+            totalWithoutScrap+=System.nanoTime()-tmp;
+            for (String url : urls) {
                 try {
+                    tmp = System.nanoTime();
                     parsedPage = new Scrap(url);
+                    totalWithoutScrap+=System.nanoTime()-tmp;
                 } catch (Exception e) {
                     continue;
                 }
@@ -53,7 +64,9 @@ public class MinionCrawler extends Thread {
                 {
                     prevRecord = seed_set.find(Filters.eq("url", url)).first();
                 }
+                tmp = System.nanoTime();
                 String hash = parsedPage.getUrlHash();
+                totalWithoutScrap+=System.nanoTime()-tmp;
                 if(prevRecord!=null){
                     if(!((String)prevRecord.get("hash")).equals(hash))
                     {
@@ -94,6 +107,8 @@ public class MinionCrawler extends Thread {
                 }
             }
         }
+        System.out.println("total="+(System.nanoTime()-total)/1000000000);
+        System.out.println("totalWithoutScrap="+(System.nanoTime()-totalWithoutScrap)/1000000000);
     }
     public void run(){
         try {

@@ -55,10 +55,8 @@ public class Scrap {
         }
     };
     public List<String> getUrls(){
-        long x = System.nanoTime();
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");
         urls.removeIf(filterPredicate);
-        System.out.println((System.nanoTime()-x)/1000000000);
         return urls;
     }
     public String getBodyHtml(){

@@ -10,6 +10,7 @@ import java.util.HashSet;
 import org.bson.Document;
 
 import eng.util.*;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -21,7 +22,8 @@ public class Seeder {
     public static void main(String[] args) throws IOException, MalformedURLException, NoSuchAlgorithmException{
         HashSet<String> exploredSet = new HashSet<String>();
         String fileName = "seed.txt";
-        String connString = "mongodb://root:password@localhost:27017/?authSource=admin";
+        Dotenv dotenv = Dotenv.load();
+        String connString = dotenv.get("CONN_STRING");
         MongoClient client = MongoClients.create(connString);
         MongoDatabase db = client.getDatabase("search_engine");
         MongoCollection<Document> seed_set = db.getCollection("seed_set");
