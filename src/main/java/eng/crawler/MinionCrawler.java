@@ -5,10 +5,8 @@ import java.net.MalformedURLException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Queue;
-// import java.util.LinkedList;
-// import java.util.Queue;
 import java.util.Vector;
-
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
@@ -22,16 +20,15 @@ import eng.util.*;
 //TODO Send new urls to indexer
 //DONE Check Robots.txt
 //TODO URL Normalization
-//TODO Performance Issues
+//DONE Performance Issues
 //DONE Synchronization
 public class MinionCrawler extends Thread {
     
-    // MongoDatabase db;
     MongoCollection<Document> seed_set;
     Queue<urlObj> urlQueue;
-    MinionCrawler(MongoCollection<Document> seed_set, Queue<urlObj> urlQueue) throws IOException{
-        
-        // this.db = client.getDatabase("search_engine");
+    AtomicInteger count;
+    MinionCrawler(MongoCollection<Document> seed_set, AtomicInteger count, Queue<urlObj> urlQueue) throws IOException{
+        this.count = count;
         this.seed_set = seed_set;
         this.urlQueue = urlQueue; 
     }
@@ -57,12 +54,12 @@ public class MinionCrawler extends Thread {
             {
                 urlObj prevRecord = null;
                 Document doc = null;
+                tmp = System.nanoTime();
                 synchronized(seed_set)
                 {
-                    tmp = System.nanoTime();
                     doc = seed_set.find(Filters.and(Filters.eq("url", urlObject.url),Filters.exists("hash"))).first();
-                    totalWithoutDB+=System.nanoTime()-tmp;
                 }
+                totalWithoutDB+=System.nanoTime()-tmp;
                 if(doc!=null){
                     prevRecord = new urlObj(doc);
                 }
@@ -70,34 +67,40 @@ public class MinionCrawler extends Thread {
                     if(!prevRecord.hash.equals(hash))
                     {
                         // Repeated & Changed
+                        tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            tmp = System.nanoTime();
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("hash", hash), Updates.inc("score",1)));
-                            totalWithoutDB+=System.nanoTime()-tmp;
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("hash", hash), Updates.inc("score",50), Updates.inc("encounters",1)));
                         }
+                        totalWithoutDB+=System.nanoTime()-tmp;
                     }
                     else
                     {
                         // Repeated
                         tmp = System.nanoTime();
-                        seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.inc("score",0.2));
+                        synchronized(seed_set)
+                        {
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.inc("score",20), Updates.inc("encounters", 1)));
+                        }
                         totalWithoutDB+=System.nanoTime()-tmp;
                         
                     }
                     tmp = System.nanoTime();
-                    seed_set.deleteOne(Filters.eq("_id",urlObject.id));
+                    synchronized(seed_set)
+                    {
+                        seed_set.deleteOne(Filters.eq("_id",urlObject.id));
+                    }
                     totalWithoutDB+=System.nanoTime()-tmp;
                     continue;
                 }
                 else
                 {
+                    tmp = System.nanoTime();
                     synchronized(seed_set)
                     {
-                        tmp = System.nanoTime();
                         doc = seed_set.find(Filters.eq("hash", hash)).first();
-                        totalWithoutDB+=System.nanoTime()-tmp;
                     }
+                    totalWithoutDB+=System.nanoTime()-tmp;
                     if(doc!=null){
                         prevRecord = new urlObj(doc);
                     }
@@ -105,14 +108,28 @@ public class MinionCrawler extends Thread {
                     {
                         // Repeated
                         tmp = System.nanoTime();
-                        seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.inc("score", 0.2));
+                        synchronized(seed_set)
+                        {
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id),Updates.combine(Updates.inc("score", 20),Updates.inc("encounters", 1)));
+                            seed_set.deleteOne(Filters.eq("_id",urlObject.id));
+                        }
                         totalWithoutDB+=System.nanoTime()-tmp;
                         continue;
                     }
                     else
                     {
+                        // Admit to DB
                         tmp = System.nanoTime();
-                        seed_set.updateOne(Filters.eq("_id",urlObject.id), Updates.set("hash", hash));
+                        synchronized(seed_set)
+                        {
+                            seed_set.deleteOne(Filters.eq("_id",urlObject.id));
+                            seed_set.insertOne(new Document(){{
+                                put("url", urlObject.url);
+                                put("encounters", urlObject.encounters +1);
+                                put("score", urlObject.score);
+                                put("hash", hash);
+                            }});
+                        }
                         totalWithoutDB+=System.nanoTime()-tmp;
                     }
                 }
@@ -124,10 +141,13 @@ public class MinionCrawler extends Thread {
             {
                 Vector<Document> urls = new Vector<Document>();
                 for (String url : urlList) {
-                    urls.add(new Document(){{put("url", url);put("score", 10);}});
+                    urls.add(new Document(){{put("url", url);put("encounters", 0);put("score", 100);}});
                 }
                 tmp = System.nanoTime();
-                seed_set.insertMany(urls);
+                synchronized(seed_set)
+                {
+                    seed_set.insertMany(urls);
+                }
                 totalWithoutDB+=System.nanoTime()-tmp;
             }
         }
@@ -141,7 +161,11 @@ public class MinionCrawler extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        System.out.println("Done");
-        // crawler_obj.crawl(10);
+        System.out.println("Minion Finished");
+        count.decrementAndGet();
+        synchronized(count)
+        {
+            count.notify();
+        }
     }
 }
