@@ -13,7 +13,6 @@ import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-import crawlercommons.robots.SimpleRobotRules;
 import crawlercommons.robots.SimpleRobotRulesParser;
 
 
@@ -35,24 +34,25 @@ public class Scrap {
         this.domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
         this.urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
     }
-    SimpleRobotRules getrobots(String url) throws MalformedURLException, IOException{
-        byte[] content = IOUtils.toByteArray(new URL(url).openStream());
-        return robots.parseContent(url, content, "text/plain", "*");
+    public boolean robotsAllow(String url) throws MalformedURLException, IOException{
+        Matcher m = domainRegex.matcher(url);
+        m.find();
+        String robotUrl = m.group()+"/robots.txt";
+        try {
+            byte[] content = IOUtils.toByteArray(new URL(robotUrl).openStream());
+            if(robots.parseContent(robotUrl, content, "text/plain", "*").isAllowed(url)){
+                return true;
+            }
+            else{
+                return false;
+            }
+        } catch (Exception e) {
+            return true;
+        }
     }
     Predicate<String> filterPredicate = (String url) -> {
         if(!urlRegex.matcher(url).matches()) return true;
-        try {
-            Matcher m = domainRegex.matcher(url);;
-            m.find();
-            if(getrobots(m.group()+"/robots.txt").isAllowed(url)){
-                return false;
-            }
-            else{
-                return true;
-            }
-        } catch (Exception e) {
-            return false;
-        }
+        return false;
     };
     public List<String> getUrls(){
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");

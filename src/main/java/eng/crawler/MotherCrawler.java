@@ -23,14 +23,22 @@ class urlObj{
     public String url;
     public String hash;
     public int encounters;
-    public int score;
+    public int visits;
+    public int timeSinceLastVisit;
+    public Double score;
     public Document doc;
     public urlObj(Document urlDoc){
         this.id = urlDoc.getObjectId("_id");
         this.url = urlDoc.getString("url");
         this.hash = urlDoc.get("hash","");
         this.encounters = urlDoc.getInteger("encounters");
-        this.score = urlDoc.getInteger("score");
+        this.visits = urlDoc.getInteger("visits");
+        this.timeSinceLastVisit = urlDoc.getInteger("time_since_last_visit");
+        try {
+            this.score = urlDoc.getDouble("score");
+        } catch (Exception e) {
+            this.score = urlDoc.getInteger("score").doubleValue();
+        }
         this.doc = urlDoc;
     }
 }
@@ -64,8 +72,8 @@ public class MotherCrawler {
                     seed_set.deleteMany(Filters.in("_id", ids));
                 }
                 FindIterable<Document> toBeCrawled = seed_set.find().limit(limit).sort(Sorts.descending("score"));
-                seed_set.updateMany(Filters.empty(), Updates.inc("score", 10));
-                seed_set.updateMany(Filters.in("_id", toBeCrawled.map(doc->doc.getObjectId("_id"))), Updates.set("score", 0));
+                seed_set.updateMany(Filters.empty(), Updates.inc("time_since_last_visit", 1));
+                seed_set.updateMany(Filters.in("_id", toBeCrawled.map(doc->doc.getObjectId("_id"))), Updates.combine(Updates.set("score", 0), Updates.inc("visits", 1), Updates.set("time_since_last_visit", 0)));
                 // new MinionCrawler(seed_set, count, toBeCrawled.map(doc->new urlObj(doc)).into(new LinkedList<urlObj>())).run();
                 new Thread(new MinionCrawler(seed_set, count, toBeCrawled.map(doc->new urlObj(doc)).into(new LinkedList<urlObj>()))).start();
                 count.incrementAndGet();
@@ -82,6 +90,6 @@ public class MotherCrawler {
         Dotenv dotenv = Dotenv.load();
         String connString = dotenv.get("CONN_STRING");
         MotherCrawler crawler_obj = new MotherCrawler(connString,4);
-        crawler_obj.operate(10);
+        crawler_obj.operate(20);
     }
 }

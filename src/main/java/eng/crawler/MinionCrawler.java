@@ -1,8 +1,5 @@
 package eng.crawler;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Queue;
 import java.util.Vector;
@@ -27,13 +24,13 @@ public class MinionCrawler extends Thread {
     MongoCollection<Document> seed_set;
     Queue<urlObj> urlQueue;
     AtomicInteger count;
-    MinionCrawler(MongoCollection<Document> seed_set, AtomicInteger count, Queue<urlObj> urlQueue) throws IOException{
+    MinionCrawler(MongoCollection<Document> seed_set, AtomicInteger count, Queue<urlObj> urlQueue) throws Exception{
         this.count = count;
         this.seed_set = seed_set;
         this.urlQueue = urlQueue; 
     }
-    public void crawl() throws IOException, MalformedURLException, NoSuchAlgorithmException{
-        Scrap parsedPage;
+    public void crawl() throws Exception{
+        Scrap scrapedPage;
         long tmp;
         long total = System.nanoTime();
         long totalWithoutScrap = System.nanoTime();
@@ -42,16 +39,26 @@ public class MinionCrawler extends Thread {
             urlObj urlObject = urlQueue.poll();
             try {
                 tmp = System.nanoTime();
-                parsedPage = new Scrap(urlObject.url);
+                scrapedPage = new Scrap(urlObject.url);
                 totalWithoutScrap+=System.nanoTime()-tmp;
             } catch (Exception e) {
                 continue;
             }
             tmp = System.nanoTime();
-            String hash = parsedPage.getUrlHash();
+            String hash = scrapedPage.getUrlHash();
             totalWithoutScrap+=System.nanoTime()-tmp;
             if(urlObject.hash.equals(""))
             {
+                tmp = System.nanoTime();
+                boolean allowed = scrapedPage.robotsAllow(urlObject.url);
+                totalWithoutScrap+=System.nanoTime()-tmp;
+                if(!allowed)
+                {
+                    synchronized(seed_set)
+                    {
+                        seed_set.deleteOne(Filters.eq("_id", urlObject.id));
+                    }
+                }
                 urlObj prevRecord = null;
                 Document doc = null;
                 tmp = System.nanoTime();
@@ -70,7 +77,7 @@ public class MinionCrawler extends Thread {
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("hash", hash), Updates.inc("score",50), Updates.inc("encounters",1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("hash", hash), Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)), Updates.inc("encounters",1)));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                     }
@@ -80,7 +87,7 @@ public class MinionCrawler extends Thread {
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.inc("score",20), Updates.inc("encounters", 1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)), Updates.inc("encounters", 1)));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                         
@@ -110,7 +117,7 @@ public class MinionCrawler extends Thread {
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id),Updates.combine(Updates.inc("score", 20),Updates.inc("encounters", 1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id),Updates.combine(Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)),Updates.inc("encounters", 1)));
                             seed_set.deleteOne(Filters.eq("_id",urlObject.id));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
@@ -126,6 +133,8 @@ public class MinionCrawler extends Thread {
                             seed_set.insertOne(new Document(){{
                                 put("url", urlObject.url);
                                 put("encounters", urlObject.encounters +1);
+                                put("visits", urlObject.visits);
+                                put("time_since_last_visit", urlObject.timeSinceLastVisit);
                                 put("score", urlObject.score);
                                 put("hash", hash);
                             }});
@@ -135,13 +144,13 @@ public class MinionCrawler extends Thread {
                 }
             }
             tmp = System.nanoTime();
-            List<String> urlList = parsedPage.getUrls();
+            List<String> urlList = scrapedPage.getUrls();
             totalWithoutScrap+=System.nanoTime()-tmp;
             if(!urlList.isEmpty())
             {
                 Vector<Document> urls = new Vector<Document>();
                 for (String url : urlList) {
-                    urls.add(new Document(){{put("url", url);put("encounters", 0);put("score", 100);}});
+                    urls.add(new Document(){{put("url", url);put("encounters", 0);put("visits", 0);put("time_since_last_visit", 0);put("score", 100);}});
                 }
                 tmp = System.nanoTime();
                 synchronized(seed_set)
