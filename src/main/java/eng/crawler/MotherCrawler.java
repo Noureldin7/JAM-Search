@@ -68,7 +68,7 @@ public class MotherCrawler {
                 if(seed_set.countDocuments(Filters.exists("hash"))>6000)
                 {
                     System.out.println("Max Cap Reached");
-                    MongoIterable<ObjectId> ids = seed_set.find(Filters.exists("hash")).limit(4000).sort(Sorts.ascending("encounters")).map(doc->doc.getObjectId("_id"));
+                    MongoIterable<ObjectId> ids = seed_set.find(Filters.exists("hash")).limit(200).sort(Sorts.ascending("encounters")).map(doc->doc.getObjectId("_id"));
                     seed_set.deleteMany(Filters.in("_id", ids));
                 }
                 FindIterable<Document> toBeCrawled = seed_set.find().limit(limit).sort(Sorts.descending("score"));

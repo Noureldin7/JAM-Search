@@ -19,7 +19,7 @@ import crawlercommons.robots.SimpleRobotRulesParser;
 public class Scrap {
     static String httpsPattern = "(https?://)";
     static String wwwPattern = "(www\\.)?";
-    static String domainNamePattern = "[a-z]{1,63}(\\.[a-z]{1,63})*";
+    static String domainNamePattern = "[-a-z]{1,63}(\\.[-a-z]{1,63})*";
     static String tldPattern = "(\\.[a-z]{2,6})+";
     static String routePattern = "(/[-_a-z]+)*(.html)?";
     static String domainPattern = httpsPattern+wwwPattern+domainNamePattern+tldPattern;
@@ -57,6 +57,10 @@ public class Scrap {
     public List<String> getUrls(){
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");
         urls.removeIf(filterPredicate);
+        if(urls.size()>10)
+        {
+            return urls.subList(0, 10);
+        }
         return urls;
     }
     public String getBodyHtml(){
