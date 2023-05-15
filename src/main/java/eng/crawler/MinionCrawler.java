@@ -17,6 +17,7 @@ import eng.util.*;
 //TODO Send new urls to indexer
 //DONE Check Robots.txt
 //TODO URL Normalization
+//TODO Track Changes
 //DONE Performance Issues
 //DONE Synchronization
 public class MinionCrawler extends Thread {
@@ -73,7 +74,7 @@ public class MinionCrawler extends Thread {
                 if(prevRecord!=null){
                     if(!prevRecord.hash.equals(hash))
                     {
-                        // Repeated & Changed
+                        // Repeated & Changed | Send to Indexer
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
@@ -83,7 +84,7 @@ public class MinionCrawler extends Thread {
                     }
                     else
                     {
-                        // Repeated
+                        // Repeated | Don't Send to Indexer
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
@@ -113,7 +114,7 @@ public class MinionCrawler extends Thread {
                     }
                     if(prevRecord!=null)
                     {
-                        // Repeated
+                        // Repeated | Don't Send to Indexer
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
@@ -125,7 +126,7 @@ public class MinionCrawler extends Thread {
                     }
                     else
                     {
-                        // Admit to DB
+                        // Admit to DB | Send to Indexer
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
@@ -141,6 +142,24 @@ public class MinionCrawler extends Thread {
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                     }
+                }
+            }
+            else
+            {
+                if(urlObject.hash.equals(hash))
+                {
+                    // Didn't change | Don't Send to Indexer
+                    continue;
+                }
+                else
+                {
+                    // Changed | Send to Indexer
+                    tmp = System.nanoTime();
+                    synchronized(seed_set)
+                    {
+                        seed_set.updateOne(Filters.eq("_id",urlObject.id), Updates.combine(Updates.set("hash", hash)));
+                    }
+                    totalWithoutDB+=System.nanoTime()-tmp;
                 }
             }
             tmp = System.nanoTime();

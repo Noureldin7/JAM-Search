@@ -1,17 +1,17 @@
 package eng.util;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import crawlercommons.robots.SimpleRobotRulesParser;
 
@@ -28,13 +28,13 @@ public class Scrap {
     SimpleRobotRulesParser robots;
     Pattern urlRegex;
     Pattern domainRegex;
-    public Scrap(String url) throws NoSuchAlgorithmException, IOException{
+    public Scrap(String url) throws Exception{
         robots = new SimpleRobotRulesParser();
         page = Jsoup.connect(url).timeout(4000).get();
         this.domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
         this.urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
     }
-    public boolean robotsAllow(String url) throws MalformedURLException, IOException{
+    public boolean robotsAllow(String url) throws Exception{
         Matcher m = domainRegex.matcher(url);
         m.find();
         String robotUrl = m.group()+"/robots.txt";
@@ -66,13 +66,17 @@ public class Scrap {
     public String getBodyHtml(){
         return page.body().html();
     }
-    public String getUrlHash() throws NoSuchAlgorithmException{
-        return Hash.encrypt(page.body().html(), "SHA-1");
+    public String getUrlHash() throws Exception{
+        Elements head = page.head().select("meta,title");
+        Element body = page.body();
+        body.select("script,style").remove();
+        String importantHtml = head.text()+body.text();
+        return Hash.encrypt(importantHtml, "SHA-1");
     }
 
-    public static void main(String args[]) throws NoSuchAlgorithmException, IOException{
+    public static void main(String args[]) throws Exception{
         // Pattern urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
         // String res = urlRegex.matcher("https://google.com").group();
-        new Scrap("https://google.com").getUrls();
+        System.out.println(new Scrap("https://google.com").getUrlHash());
     }
 }
