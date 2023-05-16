@@ -2,3 +2,4 @@
 target
 *.txt
 .env
+interface/node_modules
