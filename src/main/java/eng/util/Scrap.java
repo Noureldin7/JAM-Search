@@ -1,6 +1,7 @@
 package eng.util;
 
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -57,6 +58,7 @@ public class Scrap {
     public List<String> getUrls(){
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");
         urls.removeIf(filterPredicate);
+        Collections.shuffle(urls);
         if(urls.size()>10)
         {
             return urls.subList(0, 10);
