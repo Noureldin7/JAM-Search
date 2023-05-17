@@ -5,14 +5,9 @@ import java.util.Hashtable;
 
 import org.bson.Document;
 
-import com.mongodb.client.FindIterable;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Indexes;
-import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.*;
+import com.mongodb.client.model.*;
+
 
 public class MongoStorage implements Storage {
     MongoClient client;
