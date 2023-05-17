@@ -22,26 +22,15 @@ public class WebIndexer implements Indexer {
         synchronized(url.intern()) {
             ProcessHTMLReturn ret = processHTML(HTML);
             Hashtable<String, ArrayList<WordOccurrence>> wordList = ret.wordList;
-            int wordPosition = ret.wordPosition;
+            int wordPosition = ret.wordCount;
             IndexerOutput indexerOutput = new IndexerOutput(wordPosition, wordList);
 
             if (storage.contains(url)) {
-                storage.update(url, indexerOutput);
                 System.out.println("Re-Indexing " + url);
+                storage.update(url, indexerOutput);
             } else {
-                storage.store(url, indexerOutput, true);
+                storage.store(url, indexerOutput);
             }
-        }
-    }
-
-    public void batchIndex(String url, String HTML) {
-        synchronized(url.intern()) {
-            ProcessHTMLReturn ret = processHTML(HTML);
-            Hashtable<String, ArrayList<WordOccurrence>> wordList = ret.wordList;
-            int wordPosition = ret.wordPosition;
-            IndexerOutput indexerOutput = new IndexerOutput(wordPosition, wordList);
-
-            storage.store(url, indexerOutput, false);
         }
     }
 
@@ -49,7 +38,7 @@ public class WebIndexer implements Indexer {
         return storage.retrieve(word);
     }
 
-    public int documentCount() {
+    public long documentCount() {
         return storage.getCount();
     }
 
@@ -61,10 +50,10 @@ public class WebIndexer implements Indexer {
     
     private class ProcessHTMLReturn{
         public Hashtable<String, ArrayList<WordOccurrence>> wordList;
-        public int wordPosition;
-        public ProcessHTMLReturn(Hashtable<String, ArrayList<WordOccurrence>> wordList, int wordPosition) {
+        public int wordCount;
+        public ProcessHTMLReturn(Hashtable<String, ArrayList<WordOccurrence>> wordList, int wordCount) {
             this.wordList = wordList;
-            this.wordPosition = wordPosition;
+            this.wordCount = wordCount;
         }
     }
 
@@ -98,9 +87,12 @@ public class WebIndexer implements Indexer {
 
         wordPosition = extractWords(document.body(), wordList, wordPosition);
 
-        return new ProcessHTMLReturn(wordList, wordPosition);
+        int blockTagcount = 0;
+        for (String tag : BLOCK_TAGS) {
+            blockTagcount += document.select(tag).size();
+        }
+        return new ProcessHTMLReturn(wordList, wordPosition - blockTagcount);
     }
-
 
     private static final List<String> BLOCK_TAGS = Arrays.asList("p", "h1", "h2", "h3", "h4", "h5", "h6");
     private static int processText(String text, String parentType, Hashtable<String, ArrayList<WordOccurrence>> wordList, int wordPosition) {

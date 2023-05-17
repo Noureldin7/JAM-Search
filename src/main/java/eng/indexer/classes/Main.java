@@ -1,4 +1,7 @@
 package eng.indexer.classes;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
@@ -15,7 +18,6 @@ public class Main {
         String connectionString = dotenv.get("CONN_STRING");
         Storage storage = new MongoStorage(connectionString);
         Indexer indexer = new WebIndexer(storage);
-        indexer.clear();
         
         String seederConnection = dotenv.get("CONN_READ");
         MongoClient seederClient = MongoClients.create(seederConnection);
@@ -23,23 +25,21 @@ public class Main {
         MongoCollection<org.bson.Document> seed_set = seederDb.getCollection("seed_set");
 
         org.bson.Document query = new org.bson.Document("hash", new org.bson.Document("$exists", true));
-        long querySize = seed_set.countDocuments(query);
-        int cnt = 0;
+
+        ExecutorService executor = Executors.newFixedThreadPool(16);
+
         for (var ans : seed_set.find(query)) {
-            String url = ans.getString("url");
-            System.out.println(url);
-            try {
-                Document document = Jsoup.connect(url).timeout(4000).get();
-                indexer.index(url, document.html());
-                System.out.println((double) ++cnt / querySize * 100 + "%");
-            } catch (Exception e) {
-                System.out.println("Error in indexing " + url);
-                System.out.println(e);
-                continue;
-            }
+            executor.execute(() -> {
+                String url = ans.getString("url");
+                System.out.println(url);
+                try {
+                    Document document = Jsoup.connect(url).timeout(4000).get();
+                    indexer.index(url, document.html());
+                } catch (Exception e) {
+                    System.out.println("Error in indexing " + url);
+                    System.out.println(e);
+                }
+            });
         }
-        // String url = "https://en.wikipedia.org/wiki/Queensland";
-        // Document document = Jsoup.connect(url).timeout(4000).get();
-        // indexer.index(url, document.html());
     }
 }

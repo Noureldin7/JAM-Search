@@ -5,10 +5,10 @@ import java.util.Hashtable;
 
 public class IndexerOutput {
     // The word that is indexed
-    public int wordPosition;
+    public int wordCount;
     public Hashtable<String, ArrayList<WordOccurrence>> wordList;
-    IndexerOutput(int wordPosition, Hashtable<String, ArrayList<WordOccurrence>> wordList){
-        this.wordPosition = wordPosition;
+    IndexerOutput(int wordCount, Hashtable<String, ArrayList<WordOccurrence>> wordList){
+        this.wordCount = wordCount;
         this.wordList = wordList;
     }
 }

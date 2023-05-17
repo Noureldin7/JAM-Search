@@ -11,6 +11,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.UpdateOptions;
 
 public class MongoStorage implements Storage {
@@ -18,13 +19,14 @@ public class MongoStorage implements Storage {
     MongoDatabase db;
     MongoCollection<Document> inverted_index;
     MongoCollection<Document> indexer_stack;
-    MongoCollection<Document> entry_count;
+    
     public MongoStorage(String connectionString) {                
         this.client = MongoClients.create(connectionString);
         this.db = client.getDatabase("search_engine");
         this.inverted_index = db.getCollection("inverted_index");
         this.indexer_stack = db.getCollection("indexer_stack");
-        this.entry_count = db.getCollection("entry_count"); // don't judge me
+        inverted_index.createIndex(Indexes.ascending("word"));
+        indexer_stack.createIndex(Indexes.ascending("url"));
     }
 
     private void pushOutputToStack(String url, IndexerOutput indexerOutput) {
@@ -70,21 +72,13 @@ public class MongoStorage implements Storage {
         return new IndexerOutput(0, wordList);
     }
 
-    private void incrementCount(int delta) {
-        entry_count.updateOne(
-            Filters.eq("name", "count"),
-            new Document("$inc", new Document("count", delta)),
-            new UpdateOptions().upsert(true)
-        );
-    }
 
-    public void store(String url, IndexerOutput indexerOutput, Boolean maintainStack) {
-        if (maintainStack) {
-            pushOutputToStack(url, indexerOutput);
-        }
+    public void store(String url, IndexerOutput indexerOutput) {
+        //TODO: optimize insertions and sort output by score
+        pushOutputToStack(url, indexerOutput);
 
         Hashtable<String, ArrayList<WordOccurrence>> wordList = indexerOutput.wordList;
-        int wordPosition = indexerOutput.wordPosition;
+        int wordCount = indexerOutput.wordCount;
 
         for (String word : wordList.keySet()) {
             synchronized(word.intern()) {
@@ -97,7 +91,7 @@ public class MongoStorage implements Storage {
                 ArrayList<Document> invertedDocuments = (ArrayList<Document>) doc.get("invertedDocuments");
     
                 Document documentEntry = new Document("url", url);
-                documentEntry.append("wordCount", wordPosition); //TODO: make that word count instead
+                documentEntry.append("wordCount", wordCount);
                 
                 ArrayList<Document> wordOccurrences = new ArrayList<Document>();
     
@@ -114,12 +108,10 @@ public class MongoStorage implements Storage {
                 );
             }
         }
-        incrementCount(1);
     }
 
     public void update(String url, IndexerOutput newOutput){
         IndexerOutput oldOutput = popOutputFromStack(url);
-        incrementCount(-1);
         pushOutputToStack(url, newOutput);
         Hashtable<String, ArrayList<WordOccurrence>> oldWordList = oldOutput.wordList;
         for (var word : oldWordList.keySet()) {
@@ -143,7 +135,7 @@ public class MongoStorage implements Storage {
                 );
             }
         }
-        store(url, newOutput, true);
+        store(url, newOutput);
     }
 
     public boolean contains(String url) {
@@ -177,16 +169,8 @@ public class MongoStorage implements Storage {
         return new IndexEntry(word, invertedDocuments);
     }
 
-    
-    public int getCount() {
-        FindIterable<Document> iterable = entry_count.find(Filters.eq("name", "count"));
-        Document doc = iterable.first();
-        if (doc == null) {
-            doc = new Document("name", "count");
-            doc.append("count", 0);
-            entry_count.insertOne(doc);
-        }
-        return doc.getInteger("count");
+    public long getCount() {
+        return indexer_stack.countDocuments();
     }
 
     public void clear() {
@@ -195,10 +179,5 @@ public class MongoStorage implements Storage {
         indexer_stack.drop();
         indexer_stack = db.getCollection("indexer_stack");
         indexer_stack.drop();
-        entry_count.updateOne(
-            Filters.eq("name", "count"),
-            new Document("$set", new Document("count", 0)),
-            new UpdateOptions().upsert(true)
-            );
     }
 }
