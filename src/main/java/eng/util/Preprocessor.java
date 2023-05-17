@@ -10,6 +10,7 @@ public class Preprocessor {
         EnglishStemmer stemmer = new EnglishStemmer();
 
         // Split input text into tokens
+        // Tracking whether we are inside quotes or not and adding tokens accordingly
         ArrayList<String> tokens = new ArrayList<String>();
         StringBuilder sb = new StringBuilder();
         boolean inQuotes = false;
@@ -34,28 +35,20 @@ public class Preprocessor {
                 }
             }
         }
+        // Add the last token
         if (sb.length() > 0) {
             tokens.add(sb.toString());
         }
 
-        // Combine neighboring quote tokens and apply Snowball stemming to each token
+        // Print tokens
+        // System.out.println(tokens);
+        
         ArrayList<String> stemmedTokens = new ArrayList<String>();
         for (int i = 0; i < tokens.size(); i++) {
             String token = tokens.get(i);
-            if (token.equals("\"")) {
-                if (i > 0 && i < tokens.size() - 1 && tokens.get(i - 1).length() > 0 && tokens.get(i + 1).length() > 0) {
-                    stemmedTokens.add("\"" + tokens.get(i - 1) + " " + tokens.get(i + 1) + "\"");
-                    i += 2;
-                } else {
-                    stemmedTokens.add("\"");
-                }
-            } else if (token.length() > 1) {
-                stemmer.setCurrent(token);
-                stemmer.stem();
-                stemmedTokens.add(stemmer.getCurrent());
-            } else {
-                stemmedTokens.add(token);
-            }
+            stemmer.setCurrent(token);
+            stemmer.stem();
+            stemmedTokens.add(stemmer.getCurrent());
         }
 
         return stemmedTokens;
