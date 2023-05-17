@@ -23,10 +23,10 @@ public class Scrap {
     static String wwwPattern = "(www\\.)?";
     static String domainNamePattern = "[-a-z]{1,63}(\\.[-a-z]{1,63})*";
     static String tldPattern = "(\\.[a-z]{2,6})+";
-    static String routePattern = "(/[-_a-z]+)*(.html)?";
+    static String routePattern = "((/[-_a-z]+)*(.html)?|/)";
     static String domainPattern = httpsPattern+wwwPattern+domainNamePattern+tldPattern;
     static String urlPattern = httpsPattern+wwwPattern+domainNamePattern+tldPattern+routePattern;
-    static Pattern urlRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
+    static Pattern urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
     static Pattern domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
     public Document page;
     SimpleRobotRulesParser robots;
@@ -60,8 +60,14 @@ public class Scrap {
         Consumer<String> normalizeDomain = (String url) -> {
             Matcher mat = domainRegex.matcher(url);
             mat.find();
-            String dom = mat.group().toLowerCase().replace("https", "http");
-            url = dom+url.substring(mat.end());
+            String dom = mat.group().toLowerCase();
+            //DONE Filter out slash
+            int endIndex = url.length();
+            if(url.endsWith("/"))
+            {
+                endIndex--;
+            }
+            url = dom+url.substring(endIndex);
         };
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");
         urls.removeIf(filterPredicate);
@@ -94,6 +100,6 @@ public class Scrap {
         // mat.find();
         // String dom = mat.group().toLowerCase().replace("https", "http");
         // url = dom+url.substring(mat.end());
-        System.out.println(new Scrap("https://twitter.com/PLinUSA").getUrlHash());
+        System.out.println(new Scrap("https://www.wikipedia.com").getUrls());
     }
 }

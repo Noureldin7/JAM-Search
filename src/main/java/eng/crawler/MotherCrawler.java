@@ -10,6 +10,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
@@ -46,11 +47,16 @@ public class MotherCrawler {
     MongoClient client;
     MongoDatabase db;
     MongoCollection<Document> seed_set;
+    MongoCollection<Document> pop_table;
     int threads;
     MotherCrawler(String connString, int threads) throws Exception{
         this.client = MongoClients.create(connString);
         this.db = client.getDatabase("search_engine");
         this.seed_set = db.getCollection("seed_set");
+        this.pop_table = db.getCollection("pop_table");
+        seed_set.createIndex(Indexes.ascending("url"));
+        seed_set.createIndex(Indexes.ascending("hash"));
+        pop_table.createIndex(Indexes.ascending("url"));
         this.threads = threads;
     }
     public void operate(int limit) throws Exception{
@@ -72,9 +78,12 @@ public class MotherCrawler {
                 }
                 FindIterable<Document> toBeCrawled = seed_set.find().limit(limit).sort(Sorts.descending("score"));
                 seed_set.updateMany(Filters.empty(), Updates.inc("time_since_last_visit", 1));
-                seed_set.updateMany(Filters.in("_id", toBeCrawled.map(doc->doc.getObjectId("_id"))), Updates.combine(Updates.set("score", 0), Updates.inc("visits", 1), Updates.set("time_since_last_visit", 0)));
+                seed_set.updateMany(Filters.in("_id", toBeCrawled.map(doc->doc.getObjectId("_id"))), Updates.combine(
+                    Updates.set("score", 0),
+                    Updates.inc("visits", 1),
+                    Updates.set("time_since_last_visit", 0)));
                 // new MinionCrawler(seed_set, count, toBeCrawled.map(doc->new urlObj(doc)).into(new LinkedList<urlObj>())).run();
-                new Thread(new MinionCrawler(seed_set, count, toBeCrawled.map(doc->new urlObj(doc)).into(new LinkedList<urlObj>()))).start();
+                new Thread(new MinionCrawler(seed_set, pop_table, count, toBeCrawled.map(doc->new urlObj(doc)).into(new LinkedList<urlObj>()))).start();
                 count.incrementAndGet();
                 System.out.println("Minion Spawned");
             }

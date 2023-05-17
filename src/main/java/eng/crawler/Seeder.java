@@ -20,12 +20,13 @@ public class Seeder {
         MongoClient client = MongoClients.create(connString);
         MongoDatabase db = client.getDatabase("search_engine");
         MongoCollection<Document> seed_set = db.getCollection("seed_set");
+        MongoCollection<Document> pop_table = db.getCollection("pop_table");
         BufferedReader br = new BufferedReader(new FileReader(fileName));
         String line = br.readLine();
         while(line != null){
-            String x = line;
+            String url = line;
             Document doc = new Document(){{
-                put("url", x);
+                put("url", url);
                 put("encounters", 0);
                 put("visits", 0);
                 put("changes", 0);
@@ -34,6 +35,10 @@ public class Seeder {
                 put("score", 100);
             }};
             seed_set.insertOne(doc);
+            pop_table.insertOne(new Document(){{
+                put("url", url);
+                put("pop", 1);
+            }});
             line = br.readLine();
         }
         br.close();
