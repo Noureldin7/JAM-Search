@@ -3,6 +3,7 @@ package eng.util;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,15 +26,15 @@ public class Scrap {
     static String routePattern = "(/[-_a-z]+)*(.html)?";
     static String domainPattern = httpsPattern+wwwPattern+domainNamePattern+tldPattern;
     static String urlPattern = httpsPattern+wwwPattern+domainNamePattern+tldPattern+routePattern;
+    static Pattern urlRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
+    static Pattern domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
     public Document page;
     SimpleRobotRulesParser robots;
-    Pattern urlRegex;
-    Pattern domainRegex;
     public Scrap(String url) throws Exception{
-        robots = new SimpleRobotRulesParser();
-        page = Jsoup.connect(url).timeout(4000).get();
-        this.domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
-        this.urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
+        this.robots = new SimpleRobotRulesParser();
+        this.page = Jsoup.connect(url).timeout(4000).get();
+        // this.domainRegex = Pattern.compile(domainPattern,Pattern.CASE_INSENSITIVE);
+        // this.urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
     }
     public boolean robotsAllow(String url) throws Exception{
         Matcher m = domainRegex.matcher(url);
@@ -51,13 +52,20 @@ public class Scrap {
             return true;
         }
     }
-    Predicate<String> filterPredicate = (String url) -> {
-        if(!urlRegex.matcher(url).matches()) return true;
-        return false;
-    };
     public List<String> getUrls(){
+        Predicate<String> filterPredicate = (String url) -> {
+            if(!urlRegex.matcher(url).matches()) return true;
+            return false;
+        };
+        Consumer<String> normalizeDomain = (String url) -> {
+            Matcher mat = domainRegex.matcher(url);
+            mat.find();
+            String dom = mat.group().toLowerCase().replace("https", "http");
+            url = dom+url.substring(mat.end());
+        };
         List<String> urls = page.body().getElementsByTag("a").eachAttr("href");
         urls.removeIf(filterPredicate);
+        urls.forEach(normalizeDomain);
         Collections.shuffle(urls);
         if(urls.size()>10)
         {
@@ -78,7 +86,14 @@ public class Scrap {
 
     public static void main(String args[]) throws Exception{
         // Pattern urlRegex = Pattern.compile(urlPattern,Pattern.CASE_INSENSITIVE);
-        // String res = urlRegex.matcher("https://google.com").group();
-        System.out.println(new Scrap("https://google.com").getUrlHash());
+        // Matcher mat = urlRegex.matcher("https://twitter.com/PLinUSA");
+        // mat.find();
+        // String res = mat.group();
+        // String url = "htTp://tWitter.Com/PLinUSA";
+        // Matcher mat = domainRegex.matcher(url);
+        // mat.find();
+        // String dom = mat.group().toLowerCase().replace("https", "http");
+        // url = dom+url.substring(mat.end());
+        System.out.println(new Scrap("https://twitter.com/PLinUSA").getUrlHash());
     }
 }

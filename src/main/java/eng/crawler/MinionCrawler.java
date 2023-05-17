@@ -16,7 +16,7 @@ import eng.util.*;
 
 //DONE Send new urls to indexer
 //DONE Check Robots.txt
-//TODO URL Normalization
+//DONE URL Normalization
 //DONE Track Changes
 //DONE Performance Issues
 //DONE Synchronization
