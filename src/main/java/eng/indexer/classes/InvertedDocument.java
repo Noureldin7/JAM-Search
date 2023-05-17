@@ -2,19 +2,19 @@ package eng.indexer.classes;
 import java.util.ArrayList;
 
 public class InvertedDocument {
-    private String url;
+    private String identifier;
     // The total number of words in the document
     private int wordCount;
     private ArrayList<WordOccurrence> wordOccurrences;
     
     public InvertedDocument(String url, int wordCount, ArrayList<WordOccurrence> WordsInfo) {
-        this.url = url;
+        this.identifier = url;
         this.wordCount = wordCount;
         this.wordOccurrences = WordsInfo;
     }
     // get the url of a webpage that references this word
-    public String getUrl() {
-        return url;
+    public String getIdentifier() {
+        return identifier;
     }
     // get the normalized frequency of the word in that webpage (tf)
     public double getTF() {
