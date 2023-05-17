@@ -12,40 +12,50 @@ import java.util.List;
 import org.jsoup.nodes.Document;
 
 public class WebIndexer implements Indexer {
-    private Integer documentCount = 0;
     private static Storage storage;
 
     public WebIndexer(Storage _storage) {
         storage = _storage;
-        documentCount = 0;
     }
 
     public void index(String url, String HTML) {
-        ProcessHTMLReturn ret = processHTML(HTML);
-        Hashtable<String, ArrayList<WordOccurrence>> wordList = ret.wordList;
-        int wordPosition = ret.wordPosition;
-        IndexerOutput indexerOutput = new IndexerOutput(wordPosition, wordList);
+        synchronized(url.intern()) {
+            ProcessHTMLReturn ret = processHTML(HTML);
+            Hashtable<String, ArrayList<WordOccurrence>> wordList = ret.wordList;
+            int wordPosition = ret.wordPosition;
+            IndexerOutput indexerOutput = new IndexerOutput(wordPosition, wordList);
 
-        if (storage.contains(url)) {
-            storage.update(url, indexerOutput);
-        } else {
-            storage.store(url, indexerOutput);
-            incrementDocumentCount();
+            if (storage.contains(url)) {
+                storage.update(url, indexerOutput);
+                System.out.println("Re-Indexing " + url);
+            } else {
+                storage.store(url, indexerOutput, true);
+            }
+        }
+    }
+
+    public void batchIndex(String url, String HTML) {
+        synchronized(url.intern()) {
+            ProcessHTMLReturn ret = processHTML(HTML);
+            Hashtable<String, ArrayList<WordOccurrence>> wordList = ret.wordList;
+            int wordPosition = ret.wordPosition;
+            IndexerOutput indexerOutput = new IndexerOutput(wordPosition, wordList);
+
+            storage.store(url, indexerOutput, false);
         }
     }
 
     public IndexEntry retrieve(String word) {
-        return null;
+        return storage.retrieve(word);
     }
 
     public int documentCount() {
-        return documentCount;
+        return storage.getCount();
     }
 
     public void clear() {
         synchronized(this) {
             storage.clear();
-            documentCount = 0;
         }
     }
     
@@ -91,12 +101,6 @@ public class WebIndexer implements Indexer {
         return new ProcessHTMLReturn(wordList, wordPosition);
     }
 
-    private void incrementDocumentCount() {
-        synchronized(documentCount) {
-            documentCount++;
-            //TODO: update document count in db
-        }
-    }
 
     private static final List<String> BLOCK_TAGS = Arrays.asList("p", "h1", "h2", "h3", "h4", "h5", "h6");
     private static int processText(String text, String parentType, Hashtable<String, ArrayList<WordOccurrence>> wordList, int wordPosition) {

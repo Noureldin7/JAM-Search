@@ -22,9 +22,7 @@ public class Main {
         MongoDatabase seederDb = seederClient.getDatabase("search_engine");
         MongoCollection<org.bson.Document> seed_set = seederDb.getCollection("seed_set");
 
-        //select documents from seed set for which an attribute called hash exists
         org.bson.Document query = new org.bson.Document("hash", new org.bson.Document("$exists", true));
-        //loop over all query results
         long querySize = seed_set.countDocuments(query);
         int cnt = 0;
         for (var ans : seed_set.find(query)) {
@@ -40,5 +38,8 @@ public class Main {
                 continue;
             }
         }
+        // String url = "https://en.wikipedia.org/wiki/Queensland";
+        // Document document = Jsoup.connect(url).timeout(4000).get();
+        // indexer.index(url, document.html());
     }
 }

@@ -36,16 +36,16 @@ public class Ranker {
         Hashtable<String,Double> leaderboard = new Hashtable<String,Double>();
         for (String word : words) {
             IndexEntry entry = index.retrieve(word);
-            Double idf = Math.log(index.documentCount()/entry.getDF());
+            Double idf = Math.log(index.documentCount() / entry.getDF());
             for (InvertedDocument doc : entry.getInvertedDocuments()) {
-                Double oldValue = leaderboard.get(doc.getUrl());
+                Double oldValue = leaderboard.get(doc.getIdentifier());
                 if(oldValue==null)
                 {
-                    leaderboard.put(doc.getUrl(), idf*doc.getTF());
+                    leaderboard.put(doc.getIdentifier(), idf*doc.getTF());
                 }
                 else
                 {
-                    leaderboard.put(doc.getUrl(),oldValue+idf*doc.getTF());
+                    leaderboard.put(doc.getIdentifier(),oldValue+idf*doc.getTF());
                 }
             }
         }
