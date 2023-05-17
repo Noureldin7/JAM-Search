@@ -43,6 +43,7 @@ public class MinionCrawler extends Thread {
                 scrapedPage = new Scrap(urlObject.url);
                 totalWithoutScrap+=System.nanoTime()-tmp;
             } catch (Exception e) {
+                seed_set.deleteOne(Filters.eq("_id",urlObject.id));
                 continue;
             }
             tmp = System.nanoTime();
@@ -83,7 +84,8 @@ public class MinionCrawler extends Thread {
                                 Updates.set("hash", hash),
                                 Updates.set("score",prevRecord.timeSinceLastVisit*(Math.log10(prevRecord.encounters+1)+prevRecord.changes+1)),
                                 Updates.inc("encounters",1),
-                                Updates.inc("changes", 1)));
+                                Updates.inc("changes", 1),
+                                Updates.set("indexed",false)));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                     }
@@ -148,6 +150,7 @@ public class MinionCrawler extends Thread {
                                 put("changes", urlObject.changes);
                                 put("time_since_last_visit", urlObject.timeSinceLastVisit);
                                 put("score", urlObject.score);
+                                put("indexed", false);
                                 put("hash", hash);
                             }});
                         }
@@ -172,7 +175,8 @@ public class MinionCrawler extends Thread {
                         seed_set.updateOne(Filters.eq("_id",urlObject.id), Updates.combine(
                             Updates.set("hash", hash),
                             Updates.set("score", urlObject.timeSinceLastVisit*(Math.log10(urlObject.encounters)+urlObject.changes+1)),
-                            Updates.inc("changes", 1)));
+                            Updates.inc("changes", 1),
+                            Updates.set("indexed", false)));
                     }
                     totalWithoutDB+=System.nanoTime()-tmp;
                 }
@@ -190,7 +194,8 @@ public class MinionCrawler extends Thread {
                         put("visits", 0);
                         put("changes", 0);
                         put("time_since_last_visit", 0);
-                        put("score", 100);}});
+                        put("score", 100);
+                        put("indexed", false);}});
                 }
                 tmp = System.nanoTime();
                 synchronized(seed_set)
