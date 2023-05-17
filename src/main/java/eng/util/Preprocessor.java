@@ -10,35 +10,54 @@ public class Preprocessor {
         EnglishStemmer stemmer = new EnglishStemmer();
 
         // Split input text into tokens
-        String[] tokens = text.split("\\s+");
+        // Tracking whether we are inside quotes or not and adding tokens accordingly
+        ArrayList<String> tokens = new ArrayList<String>();
+        StringBuilder sb = new StringBuilder();
+        boolean inQuotes = false;
+        for (char c : text.toCharArray()) {
+            if (c == '\"') {
+                inQuotes = !inQuotes;
+                if (inQuotes) {
+                    sb.append(c);
+                } else {
+                    sb.append(c);
+                    tokens.add(sb.toString());
+                    sb.setLength(0);
+                }
+            } else if (inQuotes) {
+                sb.append(c);
+            } else if (Character.isLetterOrDigit(c)) {
+                sb.append(c);
+            } else {
+                if (sb.length() > 0) {
+                    tokens.add(sb.toString());
+                    sb.setLength(0);
+                }
+            }
+        }
+        // Add the last token
+        if (sb.length() > 0) {
+            tokens.add(sb.toString());
+        }
 
-        // Apply Snowball stemming to each token
+        // Print tokens
+        // System.out.println(tokens);
+        
         ArrayList<String> stemmedTokens = new ArrayList<String>();
-        for (String token : tokens) {
-            // Remove non-alphanumeric characters
-			token = token.replaceAll("[^a-zA-Z0-9]", "");
-
-			// Stem token
-			stemmer.setCurrent(token);
-			stemmer.stem();
-			String stemmedToken = stemmer.getCurrent();
-
-			// Add stemmed token to list of stemmed tokens
-			stemmedTokens.add(stemmedToken);
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i);
+            stemmer.setCurrent(token);
+            stemmer.stem();
+            stemmedTokens.add(stemmer.getCurrent());
         }
 
         return stemmedTokens;
     }
 
-	// // Test
-	// public static void main(String[] args) {
-	// 	final String text = "re-indexing indexable re-indexed re-indexes re-index re-indexing re-indexes re-indexed re-indexable re/index rein]dex";
-	// 	ArrayList<String> words = preprocess(text);
-	// 	System.out.println(words);
-	// }
+    // // Test
+    // public static void main(String[] args) {
+    //     final String text = "the quick \"brown fox\" jumps";
+    //     ArrayList<String> words = preprocess(text);
+    //     System.out.println(words);
+    // }
 }
-
-/* 
-interface integration:
-Front-end conect to java procces this java proccess is Ranker
-*/
