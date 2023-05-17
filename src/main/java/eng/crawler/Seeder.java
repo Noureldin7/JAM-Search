@@ -30,6 +30,7 @@ public class Seeder {
                 put("visits", 0);
                 put("changes", 0);
                 put("time_since_last_visit", 0);
+                put("indexed", false);
                 put("score", 100);
             }};
             seed_set.insertOne(doc);
