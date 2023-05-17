@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
 
@@ -23,11 +24,13 @@ import eng.util.*;
 public class MinionCrawler extends Thread {
     
     MongoCollection<Document> seed_set;
+    MongoCollection<Document> pop_table;
     Queue<urlObj> urlQueue;
     AtomicInteger count;
-    MinionCrawler(MongoCollection<Document> seed_set, AtomicInteger count, Queue<urlObj> urlQueue) throws Exception{
+    MinionCrawler(MongoCollection<Document> seed_set, MongoCollection<Document> pop_table, AtomicInteger count, Queue<urlObj> urlQueue) throws Exception{
         this.count = count;
         this.seed_set = seed_set;
+        this.pop_table = pop_table;
         this.urlQueue = urlQueue; 
     }
     public void crawl() throws Exception{
@@ -43,7 +46,7 @@ public class MinionCrawler extends Thread {
                 scrapedPage = new Scrap(urlObject.url);
                 totalWithoutScrap+=System.nanoTime()-tmp;
             } catch (Exception e) {
-                seed_set.deleteOne(Filters.eq("_id",urlObject.id));
+                // seed_set.deleteOne(Filters.eq("_id",urlObject.id));
                 continue;
             }
             tmp = System.nanoTime();
@@ -184,10 +187,18 @@ public class MinionCrawler extends Thread {
             tmp = System.nanoTime();
             List<String> urlList = scrapedPage.getUrls();
             totalWithoutScrap+=System.nanoTime()-tmp;
+            Document popDoc = pop_table.find(Filters.eq("url",urlObject.url)).first();
+            double popVal;
+            try {
+                popVal = popDoc.getDouble("pop");
+            } catch (Exception e) {
+                popVal = popDoc.getInteger("pop");
+            }
             if(!urlList.isEmpty())
             {
                 Vector<Document> urls = new Vector<Document>();
                 for (String url : urlList) {
+                    pop_table.updateOne(Filters.eq("url", url), Updates.inc("pop", popVal), new UpdateOptions().upsert(true));
                     urls.add(new Document(){{
                         put("url", url);
                         put("encounters", 0);
