@@ -14,10 +14,10 @@ import org.bson.Document;
 import eng.util.*;
 
 
-//TODO Send new urls to indexer
+//DONE Send new urls to indexer
 //DONE Check Robots.txt
-//TODO URL Normalization
-//TODO Track Changes
+//DONE URL Normalization
+//DONE Track Changes
 //DONE Performance Issues
 //DONE Synchronization
 public class MinionCrawler extends Thread {
@@ -75,10 +75,15 @@ public class MinionCrawler extends Thread {
                     if(!prevRecord.hash.equals(hash))
                     {
                         // Repeated & Changed | Send to Indexer
+                        // new Thread(new indexer(reindex(scrapedPage.page))).start()
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("hash", hash), Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)), Updates.inc("encounters",1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(
+                                Updates.set("hash", hash),
+                                Updates.set("score",prevRecord.timeSinceLastVisit*(Math.log10(prevRecord.encounters+1)+prevRecord.changes+1)),
+                                Updates.inc("encounters",1),
+                                Updates.inc("changes", 1)));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                     }
@@ -88,7 +93,9 @@ public class MinionCrawler extends Thread {
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)), Updates.inc("encounters", 1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id), Updates.combine(
+                                Updates.set("score",prevRecord.timeSinceLastVisit*(Math.log10(prevRecord.encounters+1)+prevRecord.changes)),
+                                Updates.inc("encounters", 1)));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
                         
@@ -118,7 +125,9 @@ public class MinionCrawler extends Thread {
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
-                            seed_set.updateOne(Filters.eq("_id",prevRecord.id),Updates.combine(Updates.set("score",prevRecord.timeSinceLastVisit*Math.log10(prevRecord.encounters+1)),Updates.inc("encounters", 1)));
+                            seed_set.updateOne(Filters.eq("_id",prevRecord.id),Updates.combine(
+                                Updates.set("score",prevRecord.timeSinceLastVisit*(Math.log10(prevRecord.encounters+1)+prevRecord.changes)),
+                                Updates.inc("encounters", 1)));
                             seed_set.deleteOne(Filters.eq("_id",urlObject.id));
                         }
                         totalWithoutDB+=System.nanoTime()-tmp;
@@ -127,6 +136,7 @@ public class MinionCrawler extends Thread {
                     else
                     {
                         // Admit to DB | Send to Indexer
+                        // new Thread(new indexer(index(scrapedPage.page))).start()
                         tmp = System.nanoTime();
                         synchronized(seed_set)
                         {
@@ -135,6 +145,7 @@ public class MinionCrawler extends Thread {
                                 put("url", urlObject.url);
                                 put("encounters", urlObject.encounters +1);
                                 put("visits", urlObject.visits);
+                                put("changes", urlObject.changes);
                                 put("time_since_last_visit", urlObject.timeSinceLastVisit);
                                 put("score", urlObject.score);
                                 put("hash", hash);
@@ -154,10 +165,14 @@ public class MinionCrawler extends Thread {
                 else
                 {
                     // Changed | Send to Indexer
+                    // new Thread(new indexer(reindex(scrapedPage.page))).start()
                     tmp = System.nanoTime();
                     synchronized(seed_set)
                     {
-                        seed_set.updateOne(Filters.eq("_id",urlObject.id), Updates.combine(Updates.set("hash", hash)));
+                        seed_set.updateOne(Filters.eq("_id",urlObject.id), Updates.combine(
+                            Updates.set("hash", hash),
+                            Updates.set("score", urlObject.timeSinceLastVisit*(Math.log10(urlObject.encounters)+urlObject.changes+1)),
+                            Updates.inc("changes", 1)));
                     }
                     totalWithoutDB+=System.nanoTime()-tmp;
                 }
@@ -169,7 +184,13 @@ public class MinionCrawler extends Thread {
             {
                 Vector<Document> urls = new Vector<Document>();
                 for (String url : urlList) {
-                    urls.add(new Document(){{put("url", url);put("encounters", 0);put("visits", 0);put("time_since_last_visit", 0);put("score", 100);}});
+                    urls.add(new Document(){{
+                        put("url", url);
+                        put("encounters", 0);
+                        put("visits", 0);
+                        put("changes", 0);
+                        put("time_since_last_visit", 0);
+                        put("score", 100);}});
                 }
                 tmp = System.nanoTime();
                 synchronized(seed_set)

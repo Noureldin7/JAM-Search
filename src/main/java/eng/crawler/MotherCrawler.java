@@ -24,28 +24,22 @@ class urlObj{
     public String hash;
     public int encounters;
     public int visits;
+    public int changes;
     public int timeSinceLastVisit;
     public Double score;
-    public Document doc;
     public urlObj(Document urlDoc){
         this.id = urlDoc.getObjectId("_id");
         this.url = urlDoc.getString("url");
         this.hash = urlDoc.get("hash","");
         this.encounters = urlDoc.getInteger("encounters");
         this.visits = urlDoc.getInteger("visits");
+        this.changes = urlDoc.getInteger("changes");
         this.timeSinceLastVisit = urlDoc.getInteger("time_since_last_visit");
         try {
             this.score = urlDoc.getDouble("score");
         } catch (Exception e) {
             this.score = urlDoc.getInteger("score").doubleValue();
         }
-        this.doc = urlDoc;
-    }
-}
-class threadTracker{
-    public AtomicInteger x;
-    threadTracker(){
-        x.set(0);;
     }
 }
 public class MotherCrawler {

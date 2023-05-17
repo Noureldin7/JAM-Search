@@ -28,6 +28,7 @@ public class Seeder {
                 put("url", x);
                 put("encounters", 0);
                 put("visits", 0);
+                put("changes", 0);
                 put("time_since_last_visit", 0);
                 put("score", 100);
             }};
