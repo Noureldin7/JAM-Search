@@ -7,7 +7,7 @@ import eng.indexer.classes.*;
 public class Ranker {
     private Indexer index;
 
-    Ranker(Indexer index) {
+    public Ranker(Indexer index) {
         this.index = index;
     }
 
@@ -97,27 +97,56 @@ public class Ranker {
     Comparator<Entry<String, Double>> comp = (Entry<String, Double> a, Entry<String, Double> b) -> {
         Double res = a.getValue() - b.getValue();
         if (res > 0) {
-            return 1;
-        } else if (res < 0) {
             return -1;
+        } else if (res < 0) {
+            return 1;
         } else {
             return 0;
         }
     };
 
-    ArrayList<String> rank(String query) {
-        String[] words = query.split(" ");
+    public ArrayList<String> rank(String[] query) {
         Hashtable<String, Double> leaderboard = new Hashtable<String,Double>();
+        
+        for (String word : query) {
+            if(word.charAt(0)=='"')
+            {
+                // Phrase
+                word = word.replace("\"", "");
+                ArrayList<IndexEntry> indexArray = new ArrayList<IndexEntry>();
+                for(String phraseWord : word.split(" "))
+                {
+                    IndexEntry entry = index.retrieve(phraseWord);
+                    if(entry==null) return null;
+                    indexArray.add(entry);
+                }
+                ArrayList<IndexEntry> filteredArray = PhraseFilter(indexArray);
+                for (IndexEntry entry : filteredArray)
+                {
+                    Double idf = Math.log((double) index.documentCount() / entry.getDF());
+                    for (InvertedDocument doc : entry.getInvertedDocuments()) {
+                        Double oldValue = leaderboard.get(doc.getIdentifier());
+                        if(oldValue == null) {
+                            leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
+                        } else {
+                            leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
+                        }
+                    }
+                }
 
-        for (String word : words) {
-            IndexEntry entry = index.retrieve(word);
-            Double idf = Math.log((double) index.documentCount() / entry.getDF());
-            for (InvertedDocument doc : entry.getInvertedDocuments()) {
-                Double oldValue = leaderboard.get(doc.getIdentifier());
-                if(oldValue == null) {
-                    leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
-                } else {
-                    leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
+            }
+            else
+            {
+                IndexEntry entry = index.retrieve(word);
+                if(entry==null) continue;
+                Double idf = Math.log((double) index.documentCount() / entry.getDF());
+                for (InvertedDocument doc : entry.getInvertedDocuments()) {
+                    Double oldValue = leaderboard.get(doc.getIdentifier());
+                    if(oldValue == null) {
+                        leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
+                    } else {
+                        leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
+                    }
                 }
             }
         }
