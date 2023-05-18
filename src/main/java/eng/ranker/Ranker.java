@@ -2,13 +2,24 @@ package eng.ranker;
 
 import java.util.*;
 import java.util.Map.Entry;
+
+import org.bson.Document;
+
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+
 import eng.indexer.classes.*;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class Ranker {
     private Indexer index;
-
+    private MongoCollection<Document> pop_table;
     public Ranker(Indexer index) {
         this.index = index;
+        Dotenv dotenv = Dotenv.load();
+        String connString = dotenv.get("CONN_STRING");
+        this.pop_table = MongoClients.create(connString).getDatabase("search_engine").getCollection("pop_table");
     }
 
     private Hashtable<String, Integer> getFrequencies(ArrayList<IndexEntry> entries) {
@@ -117,20 +128,27 @@ public class Ranker {
                 for(String phraseWord : word.split(" "))
                 {
                     IndexEntry entry = index.retrieve(phraseWord);
-                    if(entry==null) return null;
+                    if(entry==null) return new ArrayList<String>();
                     indexArray.add(entry);
                 }
                 ArrayList<IndexEntry> filteredArray = PhraseFilter(indexArray);
+                if(filteredArray==null) return new ArrayList<String>();
                 for (IndexEntry entry : filteredArray)
                 {
                     Double idf = Math.log((double) index.documentCount() / entry.getDF());
                     for (InvertedDocument doc : entry.getInvertedDocuments()) {
                         Double oldValue = leaderboard.get(doc.getIdentifier());
-                        if(oldValue == null) {
-                            leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
-                        } else {
-                            leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
+                        double pop;
+                        try {
+                            pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
+                        } catch (Exception e) {
+                            pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop");
                         }
+                        if(oldValue == null) {
+                            leaderboard.put(doc.getIdentifier(),Math.log(pop)* idf * doc.getTF());
+                        } else {
+                            leaderboard.put(doc.getIdentifier(), oldValue + Math.log(pop)*idf * doc.getTF());
+                        };
                     }
                 }
 
@@ -142,10 +160,16 @@ public class Ranker {
                 Double idf = Math.log((double) index.documentCount() / entry.getDF());
                 for (InvertedDocument doc : entry.getInvertedDocuments()) {
                     Double oldValue = leaderboard.get(doc.getIdentifier());
+                    double pop;
+                    try {
+                        pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
+                    } catch (Exception e) {
+                        pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop");
+                    }
                     if(oldValue == null) {
-                        leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
+                        leaderboard.put(doc.getIdentifier(), Math.log(pop)*idf * doc.getTF());
                     } else {
-                        leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
+                        leaderboard.put(doc.getIdentifier(), oldValue + Math.log(pop)*idf * doc.getTF());
                     }
                 }
             }
