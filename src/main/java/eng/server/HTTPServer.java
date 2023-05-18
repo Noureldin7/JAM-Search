@@ -1,6 +1,7 @@
 package eng.server;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
 
 import org.json.JSONObject;
@@ -45,13 +46,17 @@ public class HTTPServer {
                     JSONObject bodyJson = new JSONObject(body);
                     String text = bodyJson.getString("text");
                     String[] query = Preprocessor.preprocess(text).toArray(new String[0]);
-                    // System.out.println(query[1]);
-                    // System.out.println(ranker.rank(query).toString());
-                    // IOUtils.
+                    String pageStr = exchange.getRequestURI().getQuery();
+                    int page = Integer.parseInt(pageStr.substring(pageStr.length()-1));
+                    ArrayList<String> rankedUrls = ranker.rank(query);
                     exchange.getResponseHeaders().add("Content-Type", "application/json");
                     // exchange.getResponseHeaders().add("content-Type", "plain/text");
                     exchange.sendResponseHeaders(200, 0);
-                    JSONObject resJson = new JSONObject().put("urls", ranker.rank(query));
+                    if(rankedUrls.size()>10)
+                    {
+                        rankedUrls = (ArrayList<String>)rankedUrls.subList(10*(page-1), page*10);
+                    }
+                    JSONObject resJson = new JSONObject().put("urls", rankedUrls).put("total", rankedUrls.size());
                     IOUtils.write(resJson.toString(), exchange.getResponseBody());
                     exchange.getResponseBody().close();
                     exchange.close();
