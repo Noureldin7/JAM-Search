@@ -35,6 +35,9 @@ public class HTTPServer {
     }
     class handler implements HttpHandler {
         public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
             if("POST".equals(exchange.getRequestMethod()))
             {
                 String body = IOUtils.toString(exchange.getRequestBody());
@@ -55,6 +58,10 @@ public class HTTPServer {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+            else{
+                exchange.sendResponseHeaders(204, -1);
+                exchange.close();
             }
         }
         
