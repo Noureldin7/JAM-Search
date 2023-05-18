@@ -192,7 +192,7 @@ public class MinionCrawler extends Thread {
             try {
                 popVal = popDoc.getDouble("pop");
             } catch (Exception e) {
-                popVal = popDoc.getInteger("pop");
+                popVal = popDoc.getInteger("pop").doubleValue();
             }
             if(!urlList.isEmpty())
             {
