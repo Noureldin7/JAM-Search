@@ -10,15 +10,19 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 
 import eng.indexer.classes.*;
+import eng.util.Preprocessor;
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class Ranker {
     private Indexer index;
     private MongoCollection<Document> pop_table;
+
+    private static final Set<String> stopWords = new HashSet<>(Arrays.asList("a", "an", "and", "the", "this", "that", "it", "of", "to", "in", "for"));
+
     public Ranker(Indexer index) {
         this.index = index;
         Dotenv dotenv = Dotenv.load();
-        String connString = dotenv.get("CONN_STRING");
+        String connString = dotenv.get("CONN_READ");
         this.pop_table = MongoClients.create(connString).getDatabase("search_engine").getCollection("pop_table");
     }
 
@@ -118,7 +122,6 @@ public class Ranker {
 
     public ArrayList<String> rank(String[] query) {
         Hashtable<String, Double> leaderboard = new Hashtable<String,Double>();
-        
         for (String word : query) {
             if(word.charAt(0)=='"')
             {
@@ -138,16 +141,16 @@ public class Ranker {
                     Double idf = Math.log((double) index.documentCount() / entry.getDF());
                     for (InvertedDocument doc : entry.getInvertedDocuments()) {
                         Double oldValue = leaderboard.get(doc.getIdentifier());
-                        double pop;
-                        try {
-                            pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
-                        } catch (Exception e) {
-                            pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop");
-                        }
+                        // double pop;
+                        // try {
+                        //     pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
+                        // } catch (Exception e) {
+                        //     pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop").doubleValue();
+                        // }
                         if(oldValue == null) {
-                            leaderboard.put(doc.getIdentifier(),Math.log(pop)* idf * doc.getTF());
+                            leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
                         } else {
-                            leaderboard.put(doc.getIdentifier(), oldValue + Math.log(pop)*idf * doc.getTF());
+                            leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
                         };
                     }
                 }
@@ -155,21 +158,22 @@ public class Ranker {
             }
             else
             {
+                if (stopWords.contains(Preprocessor.preprocess(word).get(0))) continue;
                 IndexEntry entry = index.retrieve(word);
                 if(entry==null) continue;
                 Double idf = Math.log((double) index.documentCount() / entry.getDF());
                 for (InvertedDocument doc : entry.getInvertedDocuments()) {
                     Double oldValue = leaderboard.get(doc.getIdentifier());
-                    double pop;
-                    try {
-                        pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
-                    } catch (Exception e) {
-                        pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop");
-                    }
+                    // double pop;
+                    // try {
+                    //     pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getDouble("pop");
+                    // } catch (Exception e) {
+                    //     pop = pop_table.find(Filters.eq("url",doc.getIdentifier())).first().getInteger("pop").doubleValue();
+                    // }
                     if(oldValue == null) {
-                        leaderboard.put(doc.getIdentifier(), Math.log(pop)*idf * doc.getTF());
+                        leaderboard.put(doc.getIdentifier(), idf * doc.getTF());
                     } else {
-                        leaderboard.put(doc.getIdentifier(), oldValue + Math.log(pop)*idf * doc.getTF());
+                        leaderboard.put(doc.getIdentifier(), oldValue + idf * doc.getTF());
                     }
                 }
             }
