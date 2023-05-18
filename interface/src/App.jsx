@@ -69,7 +69,7 @@ class App extends React.Component {
         {searchResults}
         <section>
           {[...Array(Math.round(this.state.totalPages/10)).keys()].map((i)=>{
-            return <a href="" className="page" onClick={(e)=>this.UseSearchEngine(e,i)}>{i+1}</a>
+            return <a href="" className="page" onClick={(e)=>this.UseSearchEngine(e,i+1)}>{i+1}</a>
           })}
         </section>
       </div>
