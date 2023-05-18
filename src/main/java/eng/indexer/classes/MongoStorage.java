@@ -69,7 +69,6 @@ public class MongoStorage implements Storage {
 
 
     public void store(String url, IndexerOutput indexerOutput) {
-        //TODO: optimize insertions and sort output by score
         pushOutputToStack(url, indexerOutput);
 
         Hashtable<String, ArrayList<WordOccurrence>> wordList = indexerOutput.wordList;
@@ -77,28 +76,21 @@ public class MongoStorage implements Storage {
 
         for (String word : wordList.keySet()) {
             synchronized(word.intern()) {
-                FindIterable<Document> iterable = inverted_index.find(Filters.eq("word", word));
-                Document doc = iterable.first();
-                if (doc == null) {
-                    doc = new Document("word", word);
-                    doc.append("invertedDocuments", new ArrayList<Document>());
-                }
-                ArrayList<Document> invertedDocuments = (ArrayList<Document>) doc.get("invertedDocuments");
-    
-                Document documentEntry = new Document("url", url);
-                documentEntry.append("wordCount", wordCount);
-                
+                Document documentEntry = new Document("url", url)
+                    .append("wordCount", wordCount);
+
                 ArrayList<Document> wordOccurrences = new ArrayList<Document>();
-    
+
                 for (WordOccurrence wordOccurrence : wordList.get(word)) {
-                    wordOccurrences.add(new Document("position", wordOccurrence.getPosition()).append("parentTag", wordOccurrence.getParentTag()));
+                    wordOccurrences.add(new Document("position", wordOccurrence.getPosition())
+                        .append("parentTag", wordOccurrence.getParentTag()));
                 }
+
                 documentEntry.append("wordOccurrences", wordOccurrences);
-                invertedDocuments.add(documentEntry);
-                doc.append("invertedDocuments", invertedDocuments);
+
                 inverted_index.updateOne(
                     Filters.eq("word", word),
-                    new Document("$set", doc),
+                    Updates.push("invertedDocuments", documentEntry),
                     new UpdateOptions().upsert(true)
                 );
             }
@@ -111,22 +103,10 @@ public class MongoStorage implements Storage {
         Hashtable<String, ArrayList<WordOccurrence>> oldWordList = oldOutput.wordList;
         for (var word : oldWordList.keySet()) {
             synchronized(word.intern()) {
-                FindIterable<Document> iterable = inverted_index.find(Filters.eq("word", word));
-                Document doc = iterable.first();
-                if (doc == null) continue;
-                ArrayList<Document> invertedDocuments = (ArrayList<Document>) doc.get("invertedDocuments");
-                if (invertedDocuments == null) continue;
-                for (Document invertedDocument : invertedDocuments) {
-                    if (invertedDocument.getString("url").equals(url)) {
-                        invertedDocuments.remove(invertedDocument);
-                        break;
-                    }
-                }
-                doc.append("invertedDocuments", invertedDocuments);
                 inverted_index.updateOne(
                     Filters.eq("word", word),
-                    new Document("$set", doc),
-                    new UpdateOptions().upsert(true)
+                    Updates.pull("invertedDocuments", Filters.eq("url", url)),
+                    new UpdateOptions().upsert(false)
                 );
             }
         }
