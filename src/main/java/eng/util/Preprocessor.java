@@ -43,9 +43,27 @@ public class Preprocessor {
         // Print tokens
         // System.out.println(tokens);
         
+        // [the, quick, "brown fox", jump]
+
         ArrayList<String> stemmedTokens = new ArrayList<String>();
         for (int i = 0; i < tokens.size(); i++) {
+            // Stem what is inside quotes
+            
+
             String token = tokens.get(i);
+            if (token.charAt(0) == '"'){
+                token = token.substring(1, token.length()-1);
+                String temp = "\"";
+                for (String word : token.split(" ")) {
+                    stemmer.setCurrent(word);
+                    stemmer.stem();
+                    temp += stemmer.getCurrent() + " ";    
+                }
+                temp = temp.substring(0, temp.length()-1);
+                temp += "\"";
+                stemmedTokens.add(temp);
+                continue;
+            }
             stemmer.setCurrent(token);
             stemmer.stem();
             stemmedTokens.add(stemmer.getCurrent());
@@ -56,7 +74,7 @@ public class Preprocessor {
 
     // // Test
     // public static void main(String[] args) {
-    //     final String text = "the quick \"brown fox\" jumps";
+    //     final String text = "the quick \"browning fox\" jumps";
     //     ArrayList<String> words = preprocess(text);
     //     System.out.println(words);
     // }
