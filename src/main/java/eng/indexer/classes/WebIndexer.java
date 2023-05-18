@@ -76,6 +76,13 @@ public class WebIndexer implements Indexer {
                 ret.wordPosition += 1;
         } catch (Exception e) { }
 
+        try {
+            String title = document.title();
+            if (!title.trim().isEmpty())
+                processText(title, "title", wordList, ret);
+                ret.wordPosition += 1;
+        } catch (Exception e) { }
+
         document.getElementsByTag("meta").remove();
         document.getElementsByTag("script").remove();
         document.getElementsByTag("style").remove();
