@@ -68,7 +68,7 @@ class App extends React.Component {
         </form>
         {searchResults}
         <section>
-          {[...Array((this.state.totalPages>20)?20:this.state.totalPages).keys()].map((i)=>{
+          {[...Array(Math.round(this.state.totalPages/10)).keys()].map((i)=>{
             return <a href="" className="page" onClick={(e)=>this.UseSearchEngine(e,i)}>{i+1}</a>
           })}
         </section>
