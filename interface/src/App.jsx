@@ -1,12 +1,14 @@
 import React from 'react';
 import './App.css';
+//import { getMetadata } from './metadata.jsx';
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       SearchResultValues: [],
-      searchTerms: ''
+      searchTerms: '',
+      titles: []
     }
   }
   ChangeSearchTerms = (event) => {
@@ -42,18 +44,20 @@ class App extends React.Component {
     )
   }
   
+  
+
   render() {
     let searchResults = [];
-    this.state.SearchResultValues.forEach((url, i) => {
+    this.state.SearchResultValues.forEach( async (url, i) => {
+      // const metadata = await getMetadata(url);
       searchResults.push(
         <div className="searchResultDiv">
-          <h3><a href = {this.state.SearchResultValues[i]}></a></h3>
+          {/* <h3 href = {metadata.title}>{metadata.title}</h3> */}
           <span className='link'><a href={url}>{url}</a></span>
-          
+          {/* <p className='description' href = {metadata.description}>{metadata.description}</p> */}
         </div>
       )
-    })
-        
+    });   
 
     return (
       <div className="App">
