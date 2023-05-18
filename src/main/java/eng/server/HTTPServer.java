@@ -51,15 +51,8 @@ public class HTTPServer {
                     ArrayList<String> rankedUrls = ranker.rank(query);
                     exchange.getResponseHeaders().add("Content-Type", "application/json");
                     exchange.sendResponseHeaders(200, 0);
-                    JSONObject resJson;
-                    if(rankedUrls.size()>10)
-                    {
-                        resJson = new JSONObject().put("urls", rankedUrls.subList((page-1)*10, page*10)).put("total", rankedUrls.size());
-                    }
-                    else
-                    {
-                        resJson = new JSONObject().put("urls", rankedUrls).put("total", rankedUrls.size());
-                    }
+                    int lastIndex = page*10>rankedUrls.size()?rankedUrls.size():page*10;
+                    JSONObject resJson = new JSONObject().put("urls", rankedUrls.subList((page-1)*10, lastIndex)).put("total", rankedUrls.size());
                     IOUtils.write(resJson.toString(), exchange.getResponseBody());
                     exchange.getResponseBody().close();
                     exchange.close();
