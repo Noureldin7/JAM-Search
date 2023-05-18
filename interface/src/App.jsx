@@ -8,14 +8,13 @@ class App extends React.Component {
     this.state = {
       SearchResultValues: [],
       searchTerms: '',
-      titles: []
+      totalPages: 0
     }
   }
   ChangeSearchTerms = (event) => {
     this.setState({searchTerms: event.target.value});
   }
-
-  UseSearchEngine = (event) => {
+  UseSearchEngine = (event,page) => {
     if (this.state.searchTerms !== '') {
       document.title = `${this.state.searchTerms} | JAM-SEARCH`;
     } else {
@@ -24,7 +23,7 @@ class App extends React.Component {
     event.preventDefault();
     this.setState({SearchResultValues: []});
     const pointerToThis = this;
-    var url = "http://localhost:5000";
+    var url = "http://localhost:5000?page="+page;
 
     fetch(url,{
       method: 'POST',
@@ -39,6 +38,7 @@ class App extends React.Component {
       function(response) {
         response.json().then(function(data) {
           pointerToThis.setState({SearchResultValues: data.urls});
+          pointerToThis.setState({totalPages: data.total});
         })
       }
     )
@@ -64,9 +64,14 @@ class App extends React.Component {
         <h1>JAM-SEARCH</h1>
         <form action ="">
           <input type="text" value={this.state.searchTerms || ''} onChange={this.ChangeSearchTerms}/>
-          <button type='submit' onClick={this.UseSearchEngine}>Search</button>
+          <button type='submit' onClick={(e)=>{this.setState({totalPages:1});this.UseSearchEngine(e,1)}}>Search</button>
         </form>
         {searchResults}
+        <section>
+          {[...Array((this.state.totalPages>20)?20:this.state.totalPages).keys()].map((i)=>{
+            return <a href="" className="page" onClick={(e)=>this.UseSearchEngine(e,i)}>{i+1}</a>
+          })}
+        </section>
       </div>
     );
   }
