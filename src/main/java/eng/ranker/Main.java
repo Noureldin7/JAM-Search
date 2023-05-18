@@ -14,6 +14,7 @@ public class Main {
         Ranker ranker = new Ranker(indexer);
 
         // String query = "computer science";
+        // String query[] = {"مان" ,"سيتي" ,"ضد" ,"الريال"};
         String query[] = { "this", "is", "nice" };
 
         ArrayList<IndexEntry> entries = new ArrayList<IndexEntry>();

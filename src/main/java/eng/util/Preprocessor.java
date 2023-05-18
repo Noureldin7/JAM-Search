@@ -8,7 +8,7 @@ public class Preprocessor {
     public static ArrayList<String> preprocess(String text) {
         // Create a new EnglishStemmer object for stemming
         EnglishStemmer stemmer = new EnglishStemmer();
-
+        text = text.toLowerCase();
         // Split input text into tokens
         // Tracking whether we are inside quotes or not and adding tokens accordingly
         ArrayList<String> tokens = new ArrayList<String>();
